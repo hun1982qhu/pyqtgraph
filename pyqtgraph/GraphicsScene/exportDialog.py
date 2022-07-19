@@ -29,10 +29,10 @@ class ExportDialog(QtWidgets.QWidget):
         self.selectBox.setPen(fn.mkPen('y', width=3, style=QtCore.Qt.PenStyle.DashLine))
         self.selectBox.hide()
         self.scene.addItem(self.selectBox)
-        
+
         self.ui = ui_template.Ui_Form()
         self.ui.setupUi(self)
-        
+
         self.ui.closeBtn.clicked.connect(self.close)
         self.ui.exportBtn.clicked.connect(self.exportClicked)
         self.ui.copyBtn.clicked.connect(self.copyClicked)

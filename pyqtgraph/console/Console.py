@@ -56,38 +56,38 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.multiline = None
         self.inCmd = False
         self.frames = []  # stack frames to access when an item in the stack list is selected
-        
+
         self.ui = ui_template.Ui_Form()
         self.ui.setupUi(self)
         self.output = self.ui.output
         self.input = self.ui.input
         self.input.setFocus()
-        
+
         if text is not None:
             self.output.setPlainText(text)
 
         self.historyFile = historyFile
-        
+
         history = self.loadHistory()
         if history is not None:
             self.input.history = [""] + history
             self.ui.historyList.addItems(history[::-1])
         self.ui.historyList.hide()
         self.ui.exceptionGroup.hide()
-        
+
         self.input.sigExecuteCmd.connect(self.runCmd)
         self.ui.historyBtn.toggled.connect(self.ui.historyList.setVisible)
         self.ui.historyList.itemClicked.connect(self.cmdSelected)
         self.ui.historyList.itemDoubleClicked.connect(self.cmdDblClicked)
         self.ui.exceptionBtn.toggled.connect(self.ui.exceptionGroup.setVisible)
-        
+
         self.ui.catchAllExceptionsBtn.toggled.connect(self.catchAllExceptions)
         self.ui.catchNextExceptionBtn.toggled.connect(self.catchNextException)
         self.ui.clearExceptionBtn.clicked.connect(self.clearExceptionClicked)
         self.ui.exceptionStackList.itemClicked.connect(self.stackItemClicked)
         self.ui.exceptionStackList.itemDoubleClicked.connect(self.stackItemDblClicked)
         self.ui.onlyUncaughtCheck.toggled.connect(self.updateSysTrace)
-        
+
         self.currentTraceback = None
 
         # send exceptions raised in non-gui threads back to the main thread by signal.
@@ -112,10 +112,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         orig_stderr = sys.stderr
         encCmd = re.sub(r'>', '&gt;', re.sub(r'<', '&lt;', cmd))
         encCmd = re.sub(r' ', '&nbsp;', encCmd)
-        
+
         self.ui.historyList.addItem(cmd)
         self.saveHistory(self.input.history[1:100])
-        
+
         try:
             sys.stdout = self
             sys.stderr = self
@@ -126,14 +126,14 @@ class ConsoleWidget(QtWidgets.QWidget):
                 self.write("<br><div style='background-color: #CCF; color: black'><b>%s</b>\n"%encCmd, html=True, scrollToBottom=True)
                 self.inCmd = True
                 self.execSingle(cmd)
-            
+
             if not self.inCmd:
                 self.write("</div>\n", html=True, scrollToBottom=True)
-                
+
         finally:
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
-            
+
             sb = self.ui.historyList.verticalScrollBar()
             sb.setValue(sb.maximum())
             
@@ -154,10 +154,7 @@ class ConsoleWidget(QtWidgets.QWidget):
     def currentFrame(self):
         ## Return the currently selected exception stack frame (or None if there is no exception)
         index = self.ui.exceptionStackList.currentRow()
-        if index >= 0 and index < len(self.frames):
-            return self.frames[index]
-        else:
-            return None
+        return self.frames[index] if index >= 0 and index < len(self.frames) else None
         
     def execSingle(self, cmd):
         try:
@@ -166,10 +163,6 @@ class ConsoleWidget(QtWidgets.QWidget):
             return
         except SyntaxError:
             pass
-        except:
-            self.displayException()
-            return
-
         # eval failed with syntax error; try exec instead
         try:
             exec(cmd, self.globals(), self.locals())
@@ -178,8 +171,6 @@ class ConsoleWidget(QtWidgets.QWidget):
                 self.multiline = cmd
             else:
                 self.displayException()
-        except:
-            self.displayException()
             
     def execMulti(self, nextLine):
         if nextLine.strip() != '':
@@ -187,7 +178,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             return
         else:
             cmd = self.multiline
-            
+
         try:
             output = eval(cmd, self.globals(), self.locals())
             self.write(str(output) + '\n')
@@ -195,11 +186,6 @@ class ConsoleWidget(QtWidgets.QWidget):
             return
         except SyntaxError:
             pass
-        except:
-            self.displayException()
-            self.multiline = None
-            return
-
         # eval failed with syntax error; try exec instead
         try:
             exec(cmd, self.globals(), self.locals())
@@ -210,9 +196,6 @@ class ConsoleWidget(QtWidgets.QWidget):
             else:
                 self.displayException()
                 self.multiline = None
-        except:
-            self.displayException()
-            self.multiline = None
 
 
     def write(self, strn, html=False, scrollToBottom='auto'):
@@ -256,11 +239,9 @@ class ConsoleWidget(QtWidgets.QWidget):
         Display the current exception and stack.
         """
         tb = traceback.format_exc()
-        lines = []
         indent = 4
-        prefix = '' 
-        for l in tb.split('\n'):
-            lines.append(" "*indent + prefix + l)
+        prefix = ''
+        lines = [" "*indent + prefix + l for l in tb.split('\n')]
         self.write('\n'.join(lines))
         self.exceptionHandler(*sys.exc_info())
         
@@ -339,21 +320,21 @@ class ConsoleWidget(QtWidgets.QWidget):
         
     def updateSysTrace(self):
         ## Install or uninstall  sys.settrace handler 
-        
+
         if not self.ui.catchNextExceptionBtn.isChecked() and not self.ui.catchAllExceptionsBtn.isChecked():
             if sys.gettrace() == self.systrace:
                 sys.settrace(None)
             return
-        
+
         if self.ui.onlyUncaughtCheck.isChecked():
             if sys.gettrace() == self.systrace:
                 sys.settrace(None)
+        elif sys.gettrace() is None or sys.gettrace() == self.systrace:
+            sys.settrace(self.systrace)
+
         else:
-            if sys.gettrace() is not None and sys.gettrace() != self.systrace:
-                self.ui.onlyUncaughtCheck.setChecked(False)
-                raise Exception("sys.settrace is in use; cannot monitor for caught exceptions.")
-            else:
-                sys.settrace(self.systrace)
+            self.ui.onlyUncaughtCheck.setChecked(False)
+            raise Exception("sys.settrace is in use; cannot monitor for caught exceptions.")
         
     def exceptionHandler(self, excType, exc, tb, systrace=False, frame=None):
         if frame is None:
@@ -400,7 +381,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         be checked instead.
         """
         self.ui.clearExceptionBtn.setEnabled(True)
-        
+
         if frame is None:
             frame = sys._getframe().f_back
 
@@ -411,11 +392,11 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.frames = []
 
         # Build stack up to this point
-        for index, line in enumerate(traceback.extract_stack(frame)):
+        for line in traceback.extract_stack(frame):
             # extract_stack return value changed in python 3.5
             if 'FrameSummary' in str(type(line)):
                 line = (line.filename, line.lineno, line.name, line._line)
-            
+
             self.ui.exceptionStackList.addItem('File "%s", line %s, in %s()\n  %s' % line)
         while frame is not None:
             self.frames.insert(0, frame)
@@ -431,11 +412,11 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.frames.append(None)
 
         # And finish the rest of the stack up to the exception
-        for index, line in enumerate(traceback.extract_tb(tb)):
+        for line in traceback.extract_tb(tb):
             # extract_stack return value changed in python 3.5
             if 'FrameSummary' in str(type(line)):
                 line = (line.filename, line.lineno, line.name, line._line)
-            
+
             self.ui.exceptionStackList.addItem('File "%s", line %s, in %s()\n  %s' % line)
         while tb is not None:
             self.frames.append(tb.tb_frame)
@@ -448,10 +429,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         
     def checkException(self, excType, exc, tb):
         ## Return True if the exception is interesting; False if it should be ignored.
-        
+
         filename = tb.tb_frame.f_code.co_filename
         function = tb.tb_frame.f_code.co_name
-        
+
         filterStr = str(self.ui.filterText.text())
         if filterStr != '':
             if isinstance(exc, Exception):
@@ -460,7 +441,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                 msg = exc
             else:
                 msg = repr(exc)
-            match = re.search(filterStr, "%s:%s:%s" % (filename, function, msg))
+            match = re.search(filterStr, f"{filename}:{function}:{msg}")
             return match is not None
 
         ## Go through a list of common exception points we like to ignore:
@@ -486,12 +467,13 @@ class ConsoleWidget(QtWidgets.QWidget):
                 return False
             if filename.endswith('pyqtgraph/functions.py') and function == 'makeQImage':
                 return False
-        if excType is TypeError:
-            if filename.endswith('numpy/lib/function_base.py') and function == 'iterable':
-                return False
-        if excType is ZeroDivisionError:
-            if filename.endswith('python2.7/traceback.py'):
-                return False
-            
-        return True
+        if (
+            excType is TypeError
+            and filename.endswith('numpy/lib/function_base.py')
+            and function == 'iterable'
+        ):
+            return False
+        return excType is not ZeroDivisionError or not filename.endswith(
+            'python2.7/traceback.py'
+        )
     

@@ -56,7 +56,7 @@ spw.setFields([
     ('decay', {'units': 's'}),    
     ('type', {'mode': 'enum', 'values': strings}),
     ])
-    
+
 spw.setData(data)
 spw.show()
 

@@ -45,19 +45,19 @@ class HDF5Plot(pg.PlotCurveItem):
         if self.hdf5 is None:
             self.setData([])
             return
-        
+
         vb = self.getViewBox()
         if vb is None:
             return  # no ViewBox yet
-        
+
         # Determine what data range must be read from HDF5
         range_ = vb.viewRange()[0]
         start = max(0,int(range_[0])-1)
         stop = min(len(self.hdf5), int(range_[1]+2))
-        
+
         # Decide by how much we should downsample 
         ds = int((stop-start) / self.limit) + 1
-        
+
         if ds == 1:
             # Small enough to display with no intervention.
             visible = self.hdf5[start:stop]
@@ -69,28 +69,28 @@ class HDF5Plot(pg.PlotCurveItem):
             visible = np.zeros(samples*2, dtype=self.hdf5.dtype)
             sourcePtr = start
             targetPtr = 0
-            
+
             # read data in chunks of ~1M samples
             chunkSize = (1000000//ds) * ds
             while sourcePtr < stop-1: 
                 chunk = self.hdf5[sourcePtr:min(stop,sourcePtr+chunkSize)]
                 sourcePtr += len(chunk)
-                
+
                 # reshape chunk to be integral multiple of ds
                 chunk = chunk[:(len(chunk)//ds) * ds].reshape(len(chunk)//ds, ds)
-                
+
                 # compute max and min
                 chunkMax = chunk.max(axis=1)
                 chunkMin = chunk.min(axis=1)
-                
+
                 # interleave min and max into plot data to preserve envelope shape
                 visible[targetPtr:targetPtr+chunk.shape[0]*2:2] = chunkMin
                 visible[1+targetPtr:1+targetPtr+chunk.shape[0]*2:2] = chunkMax
                 targetPtr += chunk.shape[0]*2
-            
+
             visible = visible[:targetPtr]
             scale = ds * 0.5
-            
+
         self.setData(visible) # update the plot
         self.setPos(start, 0) # shift to match starting index
         self.resetTransform()
@@ -105,14 +105,14 @@ def createFile(finalSize=2000000000):
     """
     
     chunk = np.random.normal(size=1000000).astype(np.float32)
-    
+
     f = h5py.File('test.hdf5', 'w')
     f.create_dataset('data', data=chunk, chunks=True, maxshape=(None,))
     data = f['data']
 
     nChunks = finalSize // (chunk.size * chunk.itemsize)
     with pg.ProgressDialog("Generating test.hdf5...", 0, nChunks) as dlg:
-        for i in range(nChunks):
+        for _ in range(nChunks):
             newshape = [data.shape[0] + chunk.shape[0]]
             data.resize(newshape)
             data[-chunk.shape[0]:] = chunk

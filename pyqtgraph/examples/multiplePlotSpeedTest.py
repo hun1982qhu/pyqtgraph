@@ -29,20 +29,20 @@ def plot():
             ## has a bit more overhead than PlotCurveItem, which is all 
             ## we need here. This overhead adds up quickly and makes a big
             ## difference in speed.
-            
+
             #plt.plot(x=x+i, y=y+j)
             plt.addItem(pg.PlotCurveItem(x=x+i, y=y+j))
-            
+
             #path = pg.arrayToQPath(x+i, y+j)
             #item = QtWidgets.QGraphicsPathItem(path)
             #item.setPen(pg.mkPen('w'))
             #plt.addItem(item)
-            
+
     dt = perf_counter() - start
     print(f"Create plots tooks {dt * 1000:.3f} ms")
 
 ## Plot and clear 5 times, printing the time it took
-for i in range(5):
+for _ in range(5):
     plt.clear()
     plot()
     app.processEvents()
@@ -64,20 +64,20 @@ def fastPlot():
     xdata[:] = x.reshape(1,1,pts) + np.arange(n).reshape(n,1,1)
     ydata = np.empty((n, n, pts))
     ydata[:] = y.reshape(1,1,pts) + np.arange(n).reshape(1,n,1)
-    conn = np.ones((n*n,pts))
+    conn = np.ones((n**2, pts))
     conn[:,-1] = False # make sure plots are disconnected
     path = pg.arrayToQPath(xdata.flatten(), ydata.flatten(), conn.flatten())
     item = QtWidgets.QGraphicsPathItem(path)
     item.setPen(pg.mkPen('w'))
     plt.addItem(item)
-    
+
     dt = perf_counter() - start
     print("Create plots took: %0.3fms" % (dt*1000))
 
 
 ## Plot and clear 5 times, printing the time it took
 if hasattr(pg, 'arrayToQPath'):
-    for i in range(5):
+    for _ in range(5):
         plt.clear()
         fastPlot()
         app.processEvents()

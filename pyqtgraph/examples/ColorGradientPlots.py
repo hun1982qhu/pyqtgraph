@@ -50,7 +50,7 @@ class MainWindow(pg.GraphicsLayoutWidget):
         self.setWindowTitle('pyqtgraph example: gradient plots')
         self.resize(800,800)
         self.show()
-        
+
         layout = self # we are using a GraphicsLayoutWidget as main window for convenience
         cm = pg.colormap.get('CET-L17')
         cm.reverse()
@@ -63,7 +63,7 @@ class MainWindow(pg.GraphicsLayoutWidget):
         brush = cm.getBrush( span=(-1., 1.), orientation='vertical' ) 
         curve1 = pg.PlotDataItem(pen='w', brush=brush, fillLevel=0.0 )
         comment1 = 'Diverging vertical color map used as brush'
-        
+
         cm = pg.colormap.get('CET-L17')
         cm.setMappingMode('mirror')
         pen2 = cm.getPen( span=(400.0,600.0), width=5, orientation='horizontal' )
@@ -115,10 +115,7 @@ class MainWindow(pg.GraphicsLayoutWidget):
         timestamp = time.perf_counter()
         # measure actual update rate:
         dt = timestamp - self.last_update
-        if self.mean_dt is None:
-            self.mean_dt = dt
-        else:
-            self.mean_dt = 0.95 * self.mean_dt + 0.05 * dt # average over fluctuating measurements
+        self.mean_dt = dt if self.mean_dt is None else 0.95 * self.mean_dt + 0.05 * dt
         self.top_plot.setTitle(
             'refresh: {:0.1f}ms -> {:0.1f} fps'.format( 1000*self.mean_dt, 1/self.mean_dt )
         )
@@ -135,7 +132,7 @@ class MainWindow(pg.GraphicsLayoutWidget):
                 len_1 = len_buffer - idx_a # this many elements still fit
                 dic['buf'][idx_a:idx_a+len_1] = new_data[:len_1] # first part of data at end
                 idx_b = len(new_data) - len_1
-                dic['buf'][0:idx_b] = new_data[len_1:] # second part of data at re-start
+                dic['buf'][:idx_b] = new_data[len_1:]
             dic['ptr'] = idx_b
             dic['crv'].setData( dic['buf'] )
 

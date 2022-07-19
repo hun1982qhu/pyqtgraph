@@ -96,7 +96,8 @@ class ExceptionHandler(object):
 
             ## call original exception handler first (prints exception)
             global callbacks, clear_tracebacks
-            header = "===== %s =====" % str(time.strftime("%Y.%m.%d %H:%m:%S", time.localtime(time.time())))
+            header = f'===== {str(time.strftime("%Y.%m.%d %H:%m:%S", time.localtime(time.time())))} ====='
+
             try:
                 print(header)
             except Exception:
@@ -113,7 +114,7 @@ class ExceptionHandler(object):
                     cb(args)
                 except Exception:
                     print("   --------------------------------------------------------------")
-                    print("      Error occurred during exception callback %s" % str(cb))
+                    print(f"      Error occurred during exception callback {str(cb)}")
                     print("   --------------------------------------------------------------")
                     traceback.print_exception(*sys.exc_info())
 
@@ -123,7 +124,7 @@ class ExceptionHandler(object):
                     cb(args.exc_type, args.exc_value, args.exc_traceback)
                 except Exception:
                     print("   --------------------------------------------------------------")
-                    print("      Error occurred during exception callback %s" % str(cb))
+                    print(f"      Error occurred during exception callback {str(cb)}")
                     print("   --------------------------------------------------------------")
                     traceback.print_exception(*sys.exc_info())
 
@@ -136,7 +137,7 @@ class ExceptionHandler(object):
                 sys.last_traceback = None
 
             return ret
-        
+
         finally:
             sys.setrecursionlimit(recursionLimit)            
 
