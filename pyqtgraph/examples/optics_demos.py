@@ -2,6 +2,7 @@
 Optical system design demo
 """
 
+
 import numpy as np
 from optics import *
 
@@ -24,10 +25,9 @@ view.setAspectLocked()
 #view.addItem(grid)
 view.setRange(pg.QtCore.QRectF(-50, -30, 100, 100))
 
-optics = []
 rays = []
 m1 = Mirror(r1=-100, pos=(5,0), d=5, angle=-15)
-optics.append(m1)
+optics = [m1]
 m2 = Mirror(r1=-70, pos=(-40, 30), d=6, angle=180-15)
 optics.append(m2)
 
@@ -39,7 +39,7 @@ for y in np.linspace(-10, 10, 21):
 
 for o in optics:
     view.addItem(o)
-    
+
 t1 = Tracer(allRays, optics)
 
 
@@ -123,14 +123,14 @@ IROptics2 = [m1a, m2a, l3a, l4a, obja]
 
 for o in set(IROptics+IROptics2):
     view.addItem(o)
-    
+
 IRRays = []
 IRRays2 = []
 
 for dy in [-0.4, -0.15, 0, 0.15, 0.4]:
     IRRays.append(Ray(start=Point(-50, dy), dir=(1, 0), wl=780))
     IRRays2.append(Ray(start=Point(-50, dy+2*scany), dir=(1, 0), wl=780))
-    
+
 for r in set(IRRays+IRRays2):
     view.addItem(r)
 

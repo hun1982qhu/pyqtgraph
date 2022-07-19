@@ -38,7 +38,7 @@ for i in range(3,53):
     color[i] = (0.0, 1.0, 0.0, 0.5)
     z *= 0.5
     d *= 2.0
-    
+
 sp1 = gl.GLScatterPlotItem(pos=pos, size=size, color=color, pxMode=False)
 sp1.translate(5,5,0)
 w.addItem(sp1)

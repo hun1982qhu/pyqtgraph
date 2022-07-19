@@ -34,12 +34,12 @@ class HDF5Exporter(Exporter):
         if not HAVE_HDF5:
             raise RuntimeError("This exporter requires the h5py package, "
                                "but it was not importable.")
-        
+
         import h5py
 
         if not isinstance(self.item, PlotItem):
             raise Exception("Must have a PlotItem selected for HDF5 export.")
-        
+
         if fileName is None:
             self.fileSaveDialog(filter=["*.h5", "*.hdf", "*.hd5"])
             return

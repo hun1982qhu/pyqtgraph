@@ -15,18 +15,18 @@ from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 class RelativityGUI(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
-        
+
         self.animations = []
         self.animTimer = QtCore.QTimer()
         self.animTimer.timeout.connect(self.stepAnimation)
         self.animTime = 0
         self.animDt = .016
         self.lastAnimTime = 0
-        
+
         self.setupGUI()
-        
+
         self.objectGroup = ObjectGroupParam()
-        
+
         self.params = Parameter.create(name='params', type='group', children=[
             dict(name='Load Preset..', type='list', limits=[]),
             #dict(name='Unit System', type='list', limits=['', 'MKS']),
@@ -45,7 +45,7 @@ class RelativityGUI(QtWidgets.QWidget):
         self.params.param('Load').sigActivated.connect(self.load)
         self.params.param('Load Preset..').sigValueChanged.connect(self.loadPreset)
         self.params.sigTreeStateChanged.connect(self.treeChanged)
-        
+
         ## read list of preset configs
         presetDir = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'presets')
         if os.path.exists(presetDir):
@@ -183,7 +183,7 @@ class RelativityGUI(QtWidgets.QWidget):
         if preset == '':
             return
         path = os.path.abspath(os.path.dirname(__file__))
-        fn = os.path.join(path, 'presets', preset+".cfg")
+        fn = os.path.join(path, 'presets', f"{preset}.cfg")
         state = configfile.readConfigFile(fn)
         self.loadState(state)
         
@@ -279,10 +279,7 @@ class AccelerationGroup(pTypes.GroupParameter):
             ]))
             
     def generate(self):
-        prog = []
-        for cmd in self:
-            prog.append((cmd['Proper Time'], cmd['Acceleration']))
-        return prog    
+        return [(cmd['Proper Time'], cmd['Acceleration']) for cmd in self]    
         
 pTypes.registerParameterType('AccelerationGroup', AccelerationGroup)
 
@@ -306,20 +303,20 @@ class Clock(object):
         ## Keep records of object from inertial frame as well as reference frame
         self.inertData = np.empty(nPts, dtype=[('x', float), ('t', float), ('v', float), ('pt', float), ('m', float), ('f', float)])
         self.refData = np.empty(nPts, dtype=[('x', float), ('t', float), ('v', float), ('pt', float), ('m', float), ('f', float)])
-        
+
         ## Inertial frame variables
         self.x = self.x0
         self.v = self.v0
         self.m = self.m0
         self.t = 0.0       ## reference clock always starts at 0
         self.pt = self.t0      ## proper time starts at t0
-        
+
         ## reference frame variables
         self.refx = None
         self.refv = None
         self.refm = None
         self.reft = None
-        
+
         self.recordFrame(0)
         
     def recordFrame(self, i):
@@ -352,7 +349,7 @@ class Clock(object):
             t1,f = v
             if t >= t1:
                 ind = i
-        
+
         if ind == -1:
             return -np.inf, self.prog[0][0]
         elif ind == len(self.prog)-1:
@@ -363,18 +360,11 @@ class Clock(object):
         
     def getCurve(self, ref=True):
         
-        if ref is False:
-            data = self.inertData
-        else:
-            data = self.refData[1:]
-            
+        data = self.inertData if ref is False else self.refData[1:]
         x = data['x']
         y = data['t']
-        
+
         curve = pg.PlotCurveItem(x=x, y=y, pen=self.pen)
-            #x = self.data['x'] - ref.data['x']
-            #y = self.data['t']
-        
         step = 1.0
         #mod = self.data['pt'] % step
         #inds = np.argwhere(abs(mod[1:] - mod[:-1]) > step*0.9)
@@ -385,7 +375,7 @@ class Clock(object):
             if abs(diff) >= step:
                 inds.append(i)
         inds = np.array(inds)
-        
+
         #t = self.data['t'][inds]
         #x = self.data['x'][inds]   
         pts = []
@@ -397,15 +387,12 @@ class Clock(object):
                 dt = data['t'][i+1]-data['t'][i]
             else:
                 dpt = 1
-                
-            if dpt > 0:
-                c = pg.mkBrush((0,0,0))
-            else:
-                c = pg.mkBrush((200,200,200))
+
+            c = pg.mkBrush((0,0,0)) if dpt > 0 else pg.mkBrush((200,200,200))
             pts.append({'pos': (x, y), 'brush': c})
-            
+
         points = pg.ScatterPlotItem(pts, pen=self.pen, size=7)
-        
+
         return curve, points
 
 
@@ -474,15 +461,15 @@ class Simulation:
         ## and another clock starts at x0, t0, and v0, with acceleration g,
         ## compute the intersection time of the object clock's hyperbolic path with 
         ## the reference plane.
-        
+
         ## I'm sure we can simplify this...
-        
+
         if g == 0:   ## no acceleration, path is linear (and hyperbola is undefined)
             #(-t0r + t0 v0 vr - vr x0 + vr x0r)/(-1 + v0 vr)
-            
+
             t = (-t0r + t0 *v0 *vr - vr *x0 + vr *x0r)/(-1 + v0 *vr)
             return t
-        
+
         gamma = (1.0-v0**2)**-0.5
         sel = (1 if g>0 else 0) + (1 if vr<0 else 0)
         sel = sel%2
@@ -492,17 +479,17 @@ class Simulation:
             #g^2 vr x0r + \[Sqrt](g^2 vr^2 (1 + gamma^2 (v0 - vr)^2 - vr^2 + 
             #2 g gamma (v0 - vr) (-t0 + t0r + vr (x0 - x0r)) + 
             #g^2 (t0 - t0r + vr (-x0 + x0r))^2)))
-            
+
             t = (1./(g**2 *(-1. + vr**2)))*(-g**2 *t0r + g *gamma *vr + g**2 *t0 *vr**2 - g *gamma *v0 *vr**2 - g**2 *vr *x0 + g**2 *vr *x0r + np.sqrt(g**2 *vr**2 *(1. + gamma**2 *(v0 - vr)**2 - vr**2 + 2 *g *gamma *(v0 - vr)* (-t0 + t0r + vr *(x0 - x0r)) + g**2 *(t0 - t0r + vr* (-x0 + x0r))**2)))
-            
+
         else:
-            
+
             #-(1/(g^2 (-1 + vr^2)))(g^2 t0r - g gamma vr - g^2 t0 vr^2 + 
             #g gamma v0 vr^2 + g^2 vr x0 - 
             #g^2 vr x0r + \[Sqrt](g^2 vr^2 (1 + gamma^2 (v0 - vr)^2 - vr^2 + 
             #2 g gamma (v0 - vr) (-t0 + t0r + vr (x0 - x0r)) + 
             #g^2 (t0 - t0r + vr (-x0 + x0r))^2)))
-        
+
             t = -(1./(g**2 *(-1. + vr**2)))*(g**2 *t0r - g *gamma* vr - g**2 *t0 *vr**2 + g *gamma *v0 *vr**2 + g**2* vr* x0 - g**2 *vr *x0r + np.sqrt(g**2* vr**2 *(1. + gamma**2 *(v0 - vr)**2 - vr**2 + 2 *g *gamma *(v0 - vr) *(-t0 + t0r + vr *(x0 - x0r)) + g**2 *(t0 - t0r + vr *(-x0 + x0r))**2)))
         return t
         
@@ -529,7 +516,7 @@ class Simulation:
                     v = cl.v
                     tau = cl.pt
                     g = cl.acceleration()
-                    
+
                     v1, x1, tau1 = self.hypTStep(dt, v, x, tau, g)
                     if tau1 > tau2:
                         dtau = tau2-tau
@@ -538,7 +525,7 @@ class Simulation:
                     else:
                         cl.v, cl.x, cl.pt = v1, x1, tau1
                         cl.t += dt
-                        
+
                     if cl.t >= nextT:
                         cl.refx = cl.x
                         cl.refv = cl.v
@@ -552,23 +539,23 @@ class Simulation:
         ref = self.ref
         dt = self.dt
         dur = self.duration
-        
+
         ## make sure reference clock is not present in the list of clocks--this will be handled separately.
         clocks = clocks.copy()
         for k,v in clocks.items():
             if v is ref:
                 del clocks[k]
                 break
-        
+
         ref.refx = 0
         ref.refv = 0
         ref.refm = ref.m0
-        
+
         ## These are the set of proper times (in the reference frame) that will be simulated
         ptVals = np.linspace(ref.pt, ref.pt + dt*(nPts-1), nPts)
-        
+
         for i in range(1,nPts):
-                
+
             ## step reference clock ahead one time step in its proper time
             nextPt = ptVals[i]  ## this is where (when) we want to end up
             while True:
@@ -586,11 +573,11 @@ class Simulation:
                 #else:
                     #print "Stepped to", tau2, "instead of", nextPt
             ref.recordFrame(i)
-            
+
             ## determine plane visible to reference clock
             ## this plane goes through the point ref.x, ref.t and has slope = ref.v
-            
-            
+
+
             ## update all other clocks
             for cl in clocks.values():
                 while True:
@@ -600,10 +587,10 @@ class Simulation:
                     #t1 = (ref.v * (cl.x - cl.v * cl.t) + (ref.t - ref.v * ref.x)) / (1. - cl.v)
                     t1 = Simulation.hypIntersect(ref.x, ref.t, ref.v, cl.x, cl.t, cl.v, g)
                     dt1 = t1 - cl.t
-                    
+
                     ## advance clock by correct time step
                     v, x, tau = Simulation.hypTStep(dt1, cl.v, cl.x, cl.pt, g)
-                    
+
                     ## check to see whether we have gone past an acceleration command boundary.
                     ## if so, we must instead advance the clock to the boundary and start again
                     if tau < tau1:
@@ -616,7 +603,7 @@ class Simulation:
                         cl.v, cl.x, cl.t = Simulation.tauStep(dtau, cl.v, cl.x, cl.t, g)
                         cl.pt = tau2
                         continue
-                    
+
                     ## Otherwise, record the new values and exit the loop
                     cl.v = v
                     cl.x = x
@@ -624,19 +611,19 @@ class Simulation:
                     cl.t = t1
                     cl.m = None
                     break
-                
+
                 ## transform position into reference frame
                 x = cl.x - ref.x
                 t = cl.t - ref.t
                 gamma = (1.0 - ref.v**2) ** -0.5
                 vg = -ref.v * gamma
-                
+
                 cl.refx = gamma * (x - ref.v * t)
                 cl.reft = ref.pt  #  + gamma * (t - ref.v * x)   # this term belongs here, but it should always be equal to 0.
                 cl.refv = (cl.v - ref.v) / (1.0 - cl.v * ref.v)
                 cl.refm = None
                 cl.recordFrame(i)
-                
+
             t += dt
         
     def plot(self, plot):
@@ -651,7 +638,7 @@ class Animation(pg.ItemGroup):
         pg.ItemGroup.__init__(self)
         self.sim = sim
         self.clocks = sim.clocks
-        
+
         self.items = {}
         for name, cl in self.clocks.items():
             item = ClockItem(cl)

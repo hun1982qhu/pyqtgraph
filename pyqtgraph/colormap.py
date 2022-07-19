@@ -33,10 +33,12 @@ def listMaps(source=None):
     if source is None:
         pathname = path.join(path.dirname(__file__), 'colors','maps')
         files = listdir( pathname )
-        list_of_maps = []
-        for filename in files:
-            if filename[-4:] == '.csv' or filename[-4:] == '.hex':
-                list_of_maps.append(filename[:-4])
+        list_of_maps = [
+            filename[:-4]
+            for filename in files
+            if filename[-4:] in ['.csv', '.hex']
+        ]
+
         return list_of_maps
     elif source.lower() == 'matplotlib':
         try:
@@ -48,8 +50,7 @@ def listMaps(source=None):
     elif source.lower() == 'colorcet':
         try:
             import colorcet
-            list_of_maps = list( colorcet.palette.keys() )
-            list_of_maps.sort()
+            list_of_maps = sorted(colorcet.palette.keys())
             return list_of_maps
         except ModuleNotFoundError:
             return []
@@ -94,17 +95,14 @@ def _getFromFile(name):
     filename = name
     if filename[0] !='.': # load from built-in directory
         dirname = path.dirname(__file__)
-        filename = path.join(dirname, 'colors/maps/'+filename)
+        filename = path.join(dirname, f'colors/maps/{filename}')
     if not path.isfile( filename ): # try suffixes if file is not found:
-        if   path.isfile( filename+'.csv' ): filename += '.csv'
-        elif path.isfile( filename+'.hex' ): filename += '.hex'
+        if path.isfile(f'{filename}.csv'): filename += '.csv'
+        elif path.isfile(f'{filename}.hex'): filename += '.hex'
     with open(filename,'r') as fh:
         idx = 0
         color_list = []
-        if filename[-4:].lower() != '.hex':
-            csv_mode = True
-        else:
-            csv_mode = False
+        csv_mode = filename[-4:].lower() != '.hex'
         for line in fh:
             line = line.strip()
             if len(line) == 0: continue # empty line
@@ -113,7 +111,7 @@ def _getFromFile(name):
             if csv_mode:
                 comp = parts[0].split(',')
                 if len( comp ) < 3: continue # not enough components given
-                color_tuple = tuple( [ int(255*float(c)+0.5) for c in comp ] )
+                color_tuple = tuple(int(255*float(c)+0.5) for c in comp)
             else:
                 hex_str = parts[0]
                 if hex_str[0] == '#':
@@ -130,7 +128,7 @@ def _getFromFile(name):
                     raise ValueError(f"failed to convert hexadecimal value '{hex_str}'.") from e
             color_list.append( color_tuple )
             idx += 1
-        # end of line reading loop
+            # end of line reading loop
     # end of open
     cmap = ColorMap( name=name,
         pos=np.linspace(0.0, 1.0, len(color_list)),
@@ -200,7 +198,7 @@ def getFromColorcet(name):
             raise ValueError(f"Invalid color string '{hex_str}' in colorcet import.")
         color_tuple = tuple( bytes.fromhex( hex_str[1:] ) )
         color_list.append( color_tuple )
-    if len(color_list) == 0:
+    if not color_list:
         return None
     cmap = ColorMap( name=name,
         pos=np.linspace(0.0, 1.0, len(color_list)), 
@@ -496,7 +494,7 @@ class ColorMap(object):
         pos, col = self.getStops( mode=ColorMap.FLOAT )
         start = clip_scalar(start, 0.0, 1.0)
         span  = clip_scalar(span, -1.0, 1.0)
-        
+
         if span == 0.0:
             raise ValueError("'length' needs to be non-zero")
         stop = (start + span)
@@ -506,13 +504,13 @@ class ColorMap(object):
             ref_pos = start # lowest position value at start
             idxA = np.searchsorted( pos, start, side='right' )
             idxB = np.searchsorted( pos, stop , side='left'  ) # + 1 # right-side element of interval
-            wraps = bool( stop < start ) # wraps around?
+            wraps = stop < start
         else:
             ref_pos = stop # lowest position value at stop
             idxA = np.searchsorted( pos, stop , side='right')
             idxB = np.searchsorted( pos, start, side='left' ) # + 1 # right-side element of interval
-            wraps = bool( stop > start ) # wraps around?
-        
+            wraps = stop > start
+
         if wraps: # wraps around:
             length1 = (len(pos)-idxA) # before wrap
             length2 = idxB            # after wrap
@@ -602,14 +600,12 @@ class ColorMap(object):
         for i in range(color.shape[1]):
             interp[...,i] = np.interp(data, pos, color[:,i])
 
-        # Convert to QColor if requested
-        if mode == self.QCOLOR:
-            if np.isscalar(data):
-                return QtGui.QColor.fromRgbF(*interp)
-            else:
-                return [QtGui.QColor.fromRgbF(*x.tolist()) for x in interp]
-        else:
+        if mode != self.QCOLOR:
             return interp
+        if np.isscalar(data):
+            return QtGui.QColor.fromRgbF(*interp)
+        else:
+            return [QtGui.QColor.fromRgbF(*x.tolist()) for x in interp]
 
     def mapToQColor(self, data):
         """Convenience function; see :func:`map() <pyqtgraph.ColorMap.map>`."""
@@ -811,10 +807,7 @@ class ColorMap(object):
         x = np.linspace(start, stop, nPts)
         table = self.map(x, mode)
 
-        if not alpha and mode != self.QCOLOR:
-            return table[:,:3]
-        else:
-            return table
+        return table[:,:3] if not alpha and mode != self.QCOLOR else table
 
     def usesAlpha(self):
         """Returns `True` if any stops have assigned colors with alpha < 255."""
@@ -837,7 +830,7 @@ class ColorMap(object):
     def __repr__(self):
         pos = repr(self.pos).replace('\n', '')
         color = repr(self.color).replace('\n', '')
-        return "ColorMap(%s, %s)" % (pos, color)
+        return f"ColorMap({pos}, {color})"
 
     def __eq__(self, other):
         if other is None:
